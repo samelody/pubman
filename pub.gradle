@@ -1,0 +1,99 @@
+apply plugin: 'com.github.dcendents.android-maven'
+apply plugin: 'com.jfrog.bintray'
+
+group = pubspec.groupId
+version = pubspec.version
+archivesBaseName = pubspec.artifactId
+
+install {
+    repositories.mavenInstaller {
+        pom {
+            project {
+                packaging pubspec.packaging
+                groupId pubspec.groupId
+                artifactId pubspec.artifactId
+                version pubspec.version
+
+                // Add your description here
+                name pubspec.name
+                description pubspec.description
+                url pubspec.url
+
+                // Set your license
+                licenses {
+                    license {
+                        name pubspec.licenseName
+                        url pubspec.licenseUrl
+                    }
+                }
+                developers {
+                    developer {
+                        id pubspec.developerId
+                        name pubspec.developerName
+                        email pubspec.developerEmail
+                    }
+                }
+                scm {
+                    connection pubspec.gitUrl
+                    developerConnection pubspec.gitUrl
+                    url pubspec.url
+                }
+            }
+        }
+    }
+}
+
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    baseName = pubspec.artifactId
+    classifier = "sources"
+}
+
+task javadoc(type: Javadoc) {
+    source = android.sourceSets.main.java.srcDirs
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+    description pubspec.name + " Javadoc"
+    source = android.libraryVariants["release"].javaCompile.source
+    ext.androidJar = "${android.sdkDirectory}/platforms/${android.compileSdkVersion}/android.jar"
+    classpath = files(android.libraryVariants["release"].javaCompile.classpath.files) + files(ext.androidJar)
+    options.links("http://docs.oracle.com/javase/7/docs/api/")
+    options.links("http://d.android.com/reference/")
+    exclude '**/BuildConfig.java'
+    exclude '**/R.java'
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = "javadoc"
+    baseName = pubspec.artifactId
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives javadocJar
+    archives sourcesJar
+}
+
+// Bintray
+Properties properties = new Properties()
+properties.load(project.rootProject.file('local.properties').newDataInputStream())
+
+bintray {
+    user = properties.getProperty("bintray.user")
+    key = properties.getProperty("bintray.apikey")
+
+    configurations = ['archives']
+    pkg {
+        repo = pubspec.repo
+        name = pubspec.artifactId
+        desc = pubspec.description
+        websiteUrl = pubspec.url
+        vcsUrl = pubspec.gitUrl
+        issueTrackerUrl = pubspec.issueUrl
+        licenses = pubspec.licenses
+        publish = true
+        publicDownloadNumbers = true
+        version {
+            desc = pubspec.description
+        }
+    }
+}
